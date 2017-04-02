@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+project( picts-compressor )
+find_package( OpenCV )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( picts-compressor main.cpp HeaderOptions.cpp Parameters.cpp HuffmanTree.cpp HuffmanTreeNode.cpp ofbitstream.cpp ifbitstream.cpp Utilities.cpp )
+target_link_libraries( picts-compressor ${OpenCV_LIBS} )
+target_compile_features(picts-compressor PRIVATE cxx_range_for)
