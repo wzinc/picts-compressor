@@ -1,12 +1,12 @@
 #import "HuffmanTreeNode.h"
 
-HuffmanTreeNode::HuffmanTreeNode(uint64_t weight, uchar value)
+HuffmanTreeNode::HuffmanTreeNode(uint64_t weight, int8_t value)
 {
 	_weight = weight;
 	_value = value;
 }
 
-HuffmanTreeNode::HuffmanTreeNode(uint64_t weight, uchar value, HuffmanTreeNode* node0, HuffmanTreeNode* node1)
+HuffmanTreeNode::HuffmanTreeNode(uint64_t weight, int8_t value, HuffmanTreeNode* node0, HuffmanTreeNode* node1)
 	: HuffmanTreeNode(weight, value)
 {
 	_0 = node0;

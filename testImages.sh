@@ -1,32 +1,16 @@
 #!/bin/zsh
 
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0287.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0344.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0355.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0540.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0553.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0595.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0651.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0668.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0696.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0715.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0725.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0934.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_0993.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1009.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1035.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1074.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1092.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1128.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1137.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1187.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1239.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1287.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1339.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1401.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1451.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1544.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1545.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1597.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_1602.jpg
-./picts-compressor -c0 ~/Desktop/Test\ Photos/IMG_2695.jpg
+FILE_PATH="/Users/wzinc/Desktop/ASD/spaceImages/"
+QUALITY=$1
+PICTS_PATH="./picts-compressor"
+PICTS_ARGS="-c0 -q$QUALITY"
+
+rm -rf output_$QUALITY.log
+
+for f in $(ls $FILE_PATH)
+do
+# 	echo "$PICTS_PATH $PICTS_ARGS $FILE_PATH$f $FILE_PATH${f%.*}_$QUALITY.picts >> output_$QUALITY.log"
+	$PICTS_PATH -c0 -q$QUALITY $FILE_PATH$f $FILE_PATH${f%.*}_$QUALITY.picts >> output_$QUALITY.log
+done
+
+# ./picts-compressor -c0 -q10 /Users/wzinc/Desktop/ASD/spaceImages/PIA07700.tif /Users/wzinc/Desktop/ASD/spaceImages/PIA07700_10.picts

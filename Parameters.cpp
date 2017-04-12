@@ -1,4 +1,6 @@
 #include <sys/stat.h>
+#include <stdlib.h>
+
 #include "Parameters.h"
 
 Parameters::Parameters()
@@ -18,9 +20,7 @@ Parameters Parameters::ParseCommandLine(int argc, char** argv)
 		char* current = argv[i];
 
 		if (current[0] == '-')
-		{
 			for (int j = 1; current[j] != '\0'; j++)
-			{
 				switch (current[j])
 				{
 					case 'c':
@@ -29,14 +29,23 @@ Parameters Parameters::ParseCommandLine(int argc, char** argv)
 					case 'u':
 						parameters.HuffmanCoding = _extractParameter(current[++j], "Unrecognized Huffman option value");
 						break;
-					case 's':
-						parameters.Subtract128 = _extractParameter(current[++j], "Unrecognized -128 option value");
-						break;
+					// case 's':
+					// 	parameters.Subtract128 = _extractParameter(current[++j], "Unrecognized -128 option value");
+					// 	break;
+					case 'q':
+						{
+							string quality(current);
+							parameters.Quality = stoi(quality.substr(2));
+
+							if (parameters.Quality == 0)
+								_printUsageExit("Unrecognized quality value", 1);
+							
+							j = quality.size() - 1;
+							break;
+						}
 					default:
 						_printUsageExit("Unrecognized options: " + string(current), 1);
 				}
-			}
-		}
 		else
 		{
 			if (parameters.InputFileName == "")
@@ -106,7 +115,8 @@ ostream& operator<< (ostream& os, Parameters& parameters)
 	// rebuild args for serialization
 	os << "-c"  << parameters.YUVConversion
 	   << " -u" << parameters.HuffmanCoding
-	   << " -s" << parameters.Subtract128
+	//    << " -s" << parameters.Subtract128
+	   << " -q" << (int)parameters.Quality
 	   << " "   << parameters.InputFileName
 	   << " "   << parameters.OutputFileName;
 	return os;

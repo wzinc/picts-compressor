@@ -17,7 +17,7 @@ HuffmanTree::~HuffmanTree()
 	for (list<uint8_t>* layer : _layerData)
 		delete layer;
 	
-	for (map<uint8_t, uint64_t>* valueWeightMap : _valueWeightMaps)
+	for (map<int8_t, uint64_t>* valueWeightMap : _valueWeightMaps)
 		delete valueWeightMap;
 }
 
@@ -26,17 +26,15 @@ HuffmanTree* HuffmanTree::FromImage(Mat* inputImage, uint8_t layerCount)
 	// max of 8 layers
 	assert(layerCount <= 8);
 
-	// Mat must be CV_89U & evenly divisible by 8
-	assert(inputImage->type() == CV_8U   ||
-		   inputImage->type() == CV_8UC1 ||
-		   inputImage->type() == CV_8UC2 ||
-		   inputImage->type() == CV_8UC3 ||
-		   inputImage->type() == CV_8UC4 );
+	// Mat must be CV_8S[C<channel count>] & evenly divisible by 8
+	assert(inputImage->type() == CV_8S   ||
+		   inputImage->type() == CV_8SC1 ||
+		   inputImage->type() == CV_8SC2 ||
+		   inputImage->type() == CV_8SC3 ||
+		   inputImage->type() == CV_8SC4 );
 
 	uint32_t width = inputImage->size().width,
 			 height = inputImage->size().height;
-	
-	/// cout << "width: " << width << " height: " << height << endl;
 	
 	assert(!(width % 8));
 	assert(!(height % 8));
@@ -105,9 +103,11 @@ HuffmanTree* HuffmanTree::FromImage(Mat* inputImage, uint8_t layerCount)
 		vector<uint8_t> currentLayer;
 		currentLayerData[i] = currentLayer;
 
-		map<uchar, uint64_t> *layerByteCount = new map<uchar, uint64_t>;
+		map<int8_t, uint64_t> *layerByteCount = new map<int8_t, uint64_t>;
 		tree->_valueWeightMaps.push_back(layerByteCount);
 	}
+
+	// cout << "block count: " << (((width / 8) * (height / 8)) * 3) << endl;
 
 	for (uint8_t i = 0; i < channelCount; i++)
 	{
@@ -118,7 +118,7 @@ HuffmanTree* HuffmanTree::FromImage(Mat* inputImage, uint8_t layerCount)
 				Mat currentBlock = currentChannel(Rect(j, k, 8, 8));
 				
 				// zig-zag traverse matrix
-				ZigzagMatProcessor(&currentBlock, layerCount, [&](uchar* value, uint8_t index, uint8_t layer, uint8_t layerIndex)
+				ZigzagMatProcessor(&currentBlock, layerCount, [&](int8_t* value, uint8_t index, uint8_t layer, uint8_t layerIndex)
 				{
 					uint8_t layerI = layer - 1;
 
@@ -137,11 +137,14 @@ HuffmanTree* HuffmanTree::FromImage(Mat* inputImage, uint8_t layerCount)
 				// layer n has all other elements - almost certain to have trailing-zero values
 				for (uint8_t l = 0; l < layerCount; l++)
 				{
-					map<uint8_t, uint64_t> *valueWeightMap = tree->_valueWeightMaps[l];
+					// if (!i && !j && !k)
+					// 	cout << "layer: " << (int)l << "; elementCount: " << (int)elementCounts[l] << endl;
+
+					map<int8_t, uint64_t> *valueWeightMap = tree->_valueWeightMaps[l];
 
 					// other layers
 					//	add size
-					uint8_t value = elementCounts[l];
+					int8_t value = elementCounts[l];
 					tree->_layerData[l]->push_back(value);
 					((*valueWeightMap)[value])++;
 
@@ -168,13 +171,13 @@ HuffmanTree* HuffmanTree::FromImage(Mat* inputImage, uint8_t layerCount)
 	return tree;
 }
 
-HuffmanTreeNode* HuffmanTree::_treeFromValueWeightMap(map<uchar, uint64_t> *valueWeightMap)
+HuffmanTreeNode* HuffmanTree::_treeFromValueWeightMap(map<int8_t, uint64_t> *valueWeightMap)
 {
 	/// cout << "\033[1;31mHuffmanTree::_treeFromValueWeightMap\033[0m" << endl;
 	
 	// create HuffmanTreeNodes & push values to vector
 	vector<HuffmanTreeNode*> nodes;
-	for (pair<uchar, uint64_t> valueWeight : *valueWeightMap)
+	for (pair<int8_t, uint64_t> valueWeight : *valueWeightMap)
 	{
 		HuffmanTreeNode *node = new HuffmanTreeNode(valueWeight.second, valueWeight.first);
 		nodes.push_back(node);
@@ -217,7 +220,7 @@ map<uchar, tuple<uchar, uchar>> HuffmanTree::Traverse(HuffmanTreeNode* baseNode)
 	return Traverse(0, 0, baseNode);
 }
 
-map<uchar, tuple<uchar, uchar>> HuffmanTree::Traverse(uchar value, uchar depth, HuffmanTreeNode* baseNode)
+map<uchar, tuple<uchar, uchar>> HuffmanTree::Traverse(int8_t value, uchar depth, HuffmanTreeNode* baseNode)
 {
 	assert(baseNode != NULL);
 
@@ -259,8 +262,10 @@ uint64_t HuffmanTree::SerializeTree (ostream& outputStream, uint8_t layer)
 		sizeofSecond = sizeof(uint64_t),
 		recordSize = sizeofFirst + sizeofSecond;
 	
-	map<uint8_t, uint64_t> *valueWeightMap = _valueWeightMaps[layer];
+	map<int8_t, uint64_t> *valueWeightMap = _valueWeightMaps[layer];
 	uint32_t entryCount = valueWeightMap->size();
+
+	// cout << "SerializeTree: entryCount[" << (int)layer << "]: " << entryCount << endl;
 	
 	// save tree size
 	outputStream.write(reinterpret_cast<const char*>(&entryCount), sizeof(entryCount));
@@ -275,13 +280,13 @@ uint64_t HuffmanTree::SerializeTree (ostream& outputStream, uint8_t layer)
 	return entryCount * 9;
 }
 
-HuffmanTreeNode* HuffmanTree::DeserializeTree (ifbitstream& inputStream, map<uint8_t, uint64_t> *valueWeightMap)
+HuffmanTreeNode* HuffmanTree::DeserializeTree (ifbitstream& inputStream, map<int8_t, uint64_t> *valueWeightMap)
 {
 	/// cout << "\033[1;31mHuffmanTree::DeserializeTree\033[0m" << endl;
 	
 	if (!valueWeightMap)
 	{
-		map<uint8_t, uint64_t> tempValueWeightMap;
+		map<int8_t, uint64_t> tempValueWeightMap;
 		valueWeightMap = &tempValueWeightMap;
 	}
 		
@@ -292,7 +297,7 @@ HuffmanTreeNode* HuffmanTree::DeserializeTree (ifbitstream& inputStream, map<uin
 	// read tree
 	for (uint8_t j = 0; j < entryCount; j++)
 	{
-		uint8_t value;
+		int8_t value;
 		uint64_t weight;
 		inputStream.read(reinterpret_cast<char*>(&value), sizeof(value));
 		inputStream.read(reinterpret_cast<char*>(&weight), sizeof(weight));
@@ -331,7 +336,7 @@ uint8_t HuffmanTree::AddLayer(ifbitstream& inputStream, HuffmanTree* tree)
 {
 	/// cout << "\033[1;31mHuffmanTree::AddLayer\033[0m" << endl;
 
-	map<uint8_t, uint64_t> *valueWeightMap = new map<uint8_t, uint64_t>();
+	map<int8_t, uint64_t> *valueWeightMap = new map<int8_t, uint64_t>();
 	HuffmanTreeNode* root = DeserializeTree(inputStream, valueWeightMap);
 	tree->_roots.push_back(_treeFromValueWeightMap(valueWeightMap));
 
@@ -360,7 +365,7 @@ Mat* HuffmanTree::ToImage(HeaderOptions& header, uint8_t maxLayer)
 	int32_t width = header.getPadWidth(),
 		height = header.getPadHeight();
 
-	Mat *image = new Mat(height, width, CV_8UC3, Scalar(0));
+	Mat *image = new Mat(height, width, CV_8SC3, Scalar(0));
 
 	// get direct access to channels
 	vector<Mat> channels;
@@ -384,13 +389,15 @@ Mat* HuffmanTree::ToImage(HeaderOptions& header, uint8_t maxLayer)
 			for (uint32_t k = 0; k < height; k+= 8)
 			{
 				// Mat currentBlock = currentChannel(Rect(j, k, 8, 8));
-				Mat currentBlock(8, 8, CV_8UC1, Scalar(128));
+				// Mat currentBlock(8, 8, CV_8UC1, Scalar(header.getQuality() != 100 ? 128 : 64));
+				// Mat currentBlock(8, 8, CV_8UC1, Scalar(!i ? 128 : 0));
 				// Mat currentBlock(8, 8, CV_8UC1, Scalar(!i ? 0 : 128));
-				// Mat currentBlock(8, 8, CV_8UC1, Scalar(0));
+				Mat currentBlock(8, 8, CV_8SC1, Scalar(0));
+				// Mat currentBlock(8, 8, CV_8SC1, Scalar(128));
 				uint8_t currentLayer = 0, currentValueCount = 0;
 				
 				// zig-zag traverse matrix
-				ZigzagMatProcessor(&currentBlock, maxLayer, [&](uchar* value, uint8_t index, uint8_t layer, uint8_t layerIndex)
+				ZigzagMatProcessor(&currentBlock, maxLayer, [&](int8_t* value, uint8_t index, uint8_t layer, uint8_t layerIndex)
 				{
 					// if first time through, read layer data
 					if (currentLayer < layer)
@@ -439,6 +446,8 @@ uint64_t HuffmanTree::SerializeLayer(ofbitstream& outputStream, uint8_t layer)
 			 layerDataCount = layerData->size(),
 			 layerBytesLocation = outputStream.tellp();
 	
+	// cout << "SerializeLayer: layerDataCount[" << (int)layer << "]: " << layerDataCount << endl;
+	
 	// leave space for layer size
 	outputStream.write(reinterpret_cast<char*>(&layerBits), sizeof(layerBits));
 	outputStream.write(reinterpret_cast<char*>(&layerDataCount), sizeof(layerDataCount));
@@ -467,7 +476,7 @@ uint64_t HuffmanTree::SerializeLayer(ofbitstream& outputStream, uint8_t layer)
 	return serializedLayerLength;
 }
 
-uint8_t HuffmanTree::_nextValueFromBitstream(ifbitstream& inputStream, HuffmanTreeNode* root)
+int8_t HuffmanTree::_nextValueFromBitstream(ifbitstream& inputStream, HuffmanTreeNode* root)
 {
 	HuffmanTreeNode currentNode = *root;
 
@@ -509,12 +518,12 @@ list<uint8_t>* HuffmanTree::DeserializeLayer(ifbitstream& inputStream, HuffmanTr
 	return layerData;
 }
 
-void HuffmanTree::ZigzagMatProcessor (Mat* mat, uint8_t layerCount, function<bool(uchar* value, uint8_t index, uint8_t layer, uint8_t layerIndex)> elementCallback)
+void HuffmanTree::ZigzagMatProcessor (Mat* mat, uint8_t layerCount, function<bool(int8_t* value, uint8_t index, uint8_t layer, uint8_t layerIndex)> elementCallback)
 {
 	return ZigzagMatProcessor(mat, layerCount, -1, elementCallback);
 }
 
-void HuffmanTree::ZigzagMatProcessor (Mat* mat, uint8_t layerCount, int8_t stopAfterElement, function<bool(uchar* value, uint8_t index, uint8_t layer, uint8_t layerIndex)> elementCallback)
+void HuffmanTree::ZigzagMatProcessor (Mat* mat, uint8_t layerCount, int8_t stopAfterElement, function<bool(int8_t* value, uint8_t index, uint8_t layer, uint8_t layerIndex)> elementCallback)
 {
 	assert(layerCount <= MAX_LAYERS);
 	
@@ -596,7 +605,7 @@ void HuffmanTree::ZigzagMatProcessor (Mat* mat, uint8_t layerCount, int8_t stopA
 			}
 		}
 
-		uchar* row = mat->ptr<uchar>(y);
+		int8_t* row = mat->ptr<int8_t>(y);
 		
 		// stop here if callback returned false or we're supposed to stop after this element
 		if (!elementCallback(&row[x], i, currentLayer, layerIndex++) || (stopAfterElement >= 0 && i == stopAfterElement))

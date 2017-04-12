@@ -17,13 +17,13 @@ using namespace cv;
 class HuffmanTree
 {
 	public:
-		static void ZigzagMatProcessor (Mat*, uint8_t, function<bool(uchar*, uint8_t, uint8_t, uint8_t)>);
-		static void ZigzagMatProcessor (Mat*, uint8_t, int8_t, function<bool(uchar*, uint8_t, uint8_t, uint8_t)>);
+		static void ZigzagMatProcessor (Mat*, uint8_t, function<bool(int8_t*, uint8_t, uint8_t, uint8_t)>);
+		static void ZigzagMatProcessor (Mat*, uint8_t, int8_t, function<bool(int8_t*, uint8_t, uint8_t, uint8_t)>);
 
 		// static HuffmanTree* deserialize (const uchar*);
 		static HuffmanTree* Deserialize (ifbitstream&, HeaderOptions&);
 
-		static HuffmanTreeNode* DeserializeTree (ifbitstream&, map<uint8_t, uint64_t>*);
+		static HuffmanTreeNode* DeserializeTree (ifbitstream&, map<int8_t, uint64_t>*);
 		static list<uint8_t>* DeserializeLayer (ifbitstream&, HuffmanTreeNode*);
 
 		static HuffmanTree* FromImage(Mat*, uint8_t);
@@ -36,7 +36,7 @@ class HuffmanTree
 		~HuffmanTree();
 
 		static map<uchar, tuple<uchar, uchar>> Traverse(HuffmanTreeNode*);
-		static map<uchar, tuple<uchar, uchar>> Traverse(uchar, uchar, HuffmanTreeNode*);
+		static map<uchar, tuple<uchar, uchar>> Traverse(int8_t, uchar, HuffmanTreeNode*);
 
 		// returns serialized length
 		uint64_t SerializeTree (ostream&, uint8_t);
@@ -49,14 +49,14 @@ class HuffmanTree
         uint8_t getLayerCount() { return _layerCount; }
 
 	private:
-		static HuffmanTreeNode* _treeFromValueWeightMap(map<uchar, uint64_t>*);
-		static uint8_t _nextValueFromBitstream(ifbitstream&, HuffmanTreeNode*);
+		static HuffmanTreeNode* _treeFromValueWeightMap(map<int8_t, uint64_t>*);
+		static int8_t _nextValueFromBitstream(ifbitstream&, HuffmanTreeNode*);
 
 		uint8_t _layerCount;
 
 		vector<HuffmanTreeNode*> _roots;
 		vector<list<uint8_t>*> _layerData;
-		vector<map<uint8_t, uint64_t>*> _valueWeightMaps;
+		vector<map<int8_t, uint64_t>*> _valueWeightMaps;
 
 		HuffmanTree(uint8_t);
 };

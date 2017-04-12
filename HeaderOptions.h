@@ -25,6 +25,7 @@ class HeaderOptions
 		bool getYUVColor() { return _yuvColor; }
 
 		uint8_t getLayerCount() { return _layerCount; }
+		uint8_t getQuality() { return _quailty; }
 
 		void setWidth(uint32_t width) { _width = width; }
 		void setHeight(uint32_t height) { _height = height; }
@@ -37,11 +38,12 @@ class HeaderOptions
 		void setHuffmanCoding(bool huffmanCoding) { _huffmanCoding = huffmanCoding; }
 
 		void setLayerCount(uint8_t layerCount) { _layerCount = layerCount; }
+		void setQuality(uint8_t quailty) { _quailty = quailty; }
 
 	private:
 		uint32_t _width, _height, _padWidth, _padHeight;
 		bool _yuvColor, _subtract128, _huffmanCoding;
-		uint8_t _layerCount;
+		uint8_t _layerCount, _quailty;
 };
 
 #endif

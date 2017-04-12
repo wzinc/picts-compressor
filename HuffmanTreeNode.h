@@ -9,13 +9,13 @@ using namespace cv;
 class HuffmanTreeNode
 {
 	public:
-		HuffmanTreeNode(uint64_t weight, uchar value);
-		HuffmanTreeNode(uint64_t weight, uchar value, HuffmanTreeNode* node0, HuffmanTreeNode* node1);
+		HuffmanTreeNode(uint64_t weight, int8_t value);
+		HuffmanTreeNode(uint64_t weight, int8_t value, HuffmanTreeNode* node0, HuffmanTreeNode* node1);
 
 		~HuffmanTreeNode();
 
 		uint64_t getWeight() { return _weight; }
-		uchar getValue() { return _value; }
+		int8_t getValue() { return _value; }
 
 		HuffmanTreeNode* get0() { return _0; }
 		HuffmanTreeNode* get1() { return _1; }
@@ -29,7 +29,7 @@ class HuffmanTreeNode
 
 	private:
 		uint64_t _weight;
-		uchar _value;
+		int8_t _value;
 
 		HuffmanTreeNode *_0 = NULL, *_1 = NULL;
 };

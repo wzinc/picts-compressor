@@ -15,6 +15,7 @@ void HeaderOptions::Serialize (ostream& outputStream)
 	outputStream.write(reinterpret_cast<const char*>(&_height), sizeof(_height));
 	outputStream.write(reinterpret_cast<const char*>(&_padWidth), sizeof(_padWidth));
 	outputStream.write(reinterpret_cast<const char*>(&_padHeight), sizeof(_padHeight));
+	outputStream.write(reinterpret_cast<const char*>(&_quailty), sizeof(_quailty));
 }
 
 HeaderOptions HeaderOptions::Deserialize (istream& inputStream)
@@ -39,16 +40,18 @@ HeaderOptions HeaderOptions::Deserialize (istream& inputStream)
 	inputStream.read((char*)&flags, 1);
 
 	HeaderOptions options;
+	options._layerCount = flags & 0x0f;
+	options._yuvColor = (flags & 0x80) > 0;
+	options._huffmanCoding = (flags & 0x40) > 0;
+	options._subtract128 = (flags & 0x20) > 0;
+
 	inputStream.read((char*)&options._width, sizeof(options._width));
 	inputStream.read((char*)&options._height, sizeof(options._height));
 
 	inputStream.read((char*)&options._padWidth, sizeof(options._padWidth));
 	inputStream.read((char*)&options._padHeight, sizeof(options._padHeight));
 
-	options._layerCount = flags & 0x0f;
-	options._yuvColor = (flags & 0x80) > 0;
-	options._huffmanCoding = (flags & 0x40) > 0;
-	options._subtract128 = (flags & 0x20) > 0;
+	inputStream.read((char*)&options._quailty, sizeof(options._quailty));
 
 	return options;
 }

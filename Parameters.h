@@ -7,6 +7,7 @@ class Parameters
 	public:
 		string InputFileName, OutputFileName;
 		bool YUVConversion, HuffmanCoding, Subtract128;
+		uint8_t Quality;
 
 		Parameters();
 

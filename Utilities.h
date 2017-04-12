@@ -6,7 +6,7 @@
 
 #include "HuffmanTree.h"
 
-#define QUALITY 50.0
+#define DEFAULT_QUALITY 50
 
 using namespace std;
 using namespace cv;
@@ -18,9 +18,15 @@ class Utilities
 		static Mat* GenerateQuantizationMatricies(double);
 
 		static HuffmanTree* OpenFile(string, HeaderOptions&);
+        static HeaderOptions ReadHeader(string filePath);
 		static Mat ToMat (HuffmanTree*, HeaderOptions*);
 		static Mat ToMat (HuffmanTree*, HeaderOptions*, uint8_t);
 		static void DecompressImage(Mat*, HeaderOptions*);
+
+		static double getPSNR(const Mat&, const Mat&);
+		static Scalar getMSSIM(const Mat&, const Mat&);
+
+		static string type2str(int);
 };
 
 #endif

@@ -24,8 +24,23 @@ using namespace cv;
 // 	{110, 136, 123, 123, 123, 136, 154, 136}
 // };
 
+void _imagePSNRCompare(string, string);
+
 int main (int argc, char** argv)
 {
+	// for (double i = 10.0; i < 100.0; i += 10.0)
+	// {
+	// 	Mat* matricies = Utilities::GenerateQuantizationMatricies(i);
+
+	// 	matricies[0].convertTo(matricies[0], CV_8UC3);
+	// 	matricies[1].convertTo(matricies[1], CV_8UC3);
+
+	// 	cout << i << endl << matricies[0] << endl << matricies[1] << endl << endl;
+	// 	delete [] matricies;
+	// }
+	
+	// exit(0);
+
 	// parse CLI input
 	Parameters parameters = Parameters::ParseCommandLine(argc, argv);
 	// cout << "Parameters: " << parameters << endl;
@@ -51,6 +66,7 @@ int main (int argc, char** argv)
 	options.setYUVColor(parameters.YUVConversion);
 	options.setSubtract128(parameters.Subtract128);
 	options.setHuffmanCoding(parameters.HuffmanCoding);
+	options.setQuality(parameters.Quality != 0 ? parameters.Quality : DEFAULT_QUALITY);
 	options.setLayerCount(8);
 
 	// cout << "width: " << options.getWidth() << endl;
@@ -107,7 +123,7 @@ int main (int argc, char** argv)
 	split(inputImage, channels);
 	short channelCount = inputImage.channels();
 
-	Mat* quantizationMatricies = Utilities::GenerateQuantizationMatricies(QUALITY);
+	Mat* quantizationMatricies = Utilities::GenerateQuantizationMatricies((double)parameters.Quality);
 	Mat luminance = quantizationMatricies[0],
 		chrominance = quantizationMatricies[1];
 	
@@ -124,7 +140,7 @@ int main (int argc, char** argv)
 			// 	cout << "original: " << endl << currentBlock << endl << "===============================================" << endl;
 
 			// if -128 cli flag
-			if (parameters.Subtract128)
+			// if (parameters.Subtract128)
 			{
 				subtract(currentBlock, 128.0, currentBlock);
 
@@ -138,48 +154,32 @@ int main (int argc, char** argv)
 			// if (!i && !j && !k)
 			// 	cout << "after DCT: " << endl << currentBlock << endl << "===============================================" << endl;
 			
-			// 80% quantization
-			if (QUALITY < 100.0)
-				divide(currentBlock, !i ? luminance : chrominance, currentBlock);
+			// quantization
+			divide(currentBlock, !i ? luminance : chrominance, currentBlock);
 
 			// if (!i && !j && !k)
 			// 	cout << "after quantization: " << endl << currentBlock << endl << "===============================================" << endl;
 
 			Utilities::RoundSingleDimMat(&currentBlock);
 			
-			if (!i && !j && !k)
-				cout << "after _roundSingleDimMat: " << endl << currentBlock << endl << "===============================================" << endl;
-			exit(1);
+			// if (!i && !j && !k)
+			// 	cout << "after _roundSingleDimMat (final): " << endl << currentBlock << endl << "===============================================" << endl;
 			
-			// if -128 cli flag, add it back now
-			if (parameters.Subtract128)
-			{
-				add(currentBlock, 128.0, currentBlock);
-			
-				// if (!i && !j && !k)
-				// 	cout << "after +128.0: " << endl << currentBlock << endl << "===============================================" << endl;
-			}
-
-			currentBlock.convertTo(currentBlock, CV_8U);
-			currentBlock.convertTo(currentBlock, CV_64F);
-
-			if (!i && !j && !k)
-				cout << "after convertTo (final): " << endl << currentBlock << endl << "===============================================" << endl;
-
 			currentBlock.copyTo(currentChannel(Rect(j, k, 8, 8)));
 		}
 	}
 
 	Mat outputImage;
 	merge(channels, outputImage);
-	outputImage.convertTo(outputImage, CV_8UC3);
+	outputImage.convertTo(outputImage, CV_8SC3);
 
 	HuffmanTree* tree;
 	tree = HuffmanTree::FromImage(&outputImage, options.getLayerCount());
 
 	ofbitstream file(parameters.OutputFileName);
 
-	cout << parameters.OutputFileName << "\t" << options.getWidth() << "\t" << options.getHeight() << "\t";
+	Mat original = imread(parameters.InputFileName, IMREAD_COLOR);
+	cout << parameters.OutputFileName << "\t" << options.getWidth() << "\t" << options.getHeight() << "\t" << (int)options.getQuality() << "\t";
 
 	// write header
 	options.Serialize(file);
@@ -189,26 +189,95 @@ int main (int argc, char** argv)
 		uint64_t treeSize = tree->SerializeTree(file, i);
 		uint64_t layerSize = tree->SerializeLayer(file, i);
 		cout << (treeSize + layerSize) << "\t";
-		// cout << "layer[" << (int)i << "] - tree: " << treeSize << " + layer: " << layerSize << " = " << (treeSize + layerSize) << " B" << endl;
+
+		Mat currentLayerImage = Utilities::ToMat(tree, &options, i + 1);
+		Mat resizedOriginal = original.clone();
+
+		resize(resizedOriginal, resizedOriginal, currentLayerImage.size());
+
+		// compare PSNR to original
+		double psnrEachother = Utilities::getPSNR(currentLayerImage, resizedOriginal);
+
+		// resize(resizedOriginal, resizedOriginal, original.size());
+		// resize(currentLayerImage, currentLayerImage, original.size());
+
+		// psnrDifferences.push_back(psnrEachother);
+
+		// print results
+		cout << psnrEachother << "\t";
 	}
 
 	cout << endl;
 
 	file.close();
-	// delete tree;
 
-	// for (uint8_t layer = 1; layer <= options.getLayerCount(); layer++)
-	// {
-	// 	HeaderOptions inHeader;
-	// 	tree = Utilities::OpenFile(parameters.OutputFileName, inHeader);
+	// HeaderOptions header;
+	// HuffmanTree *inTree = Utilities::OpenFile(parameters.OutputFileName, header);
 
-	// 	Mat inFileImage = Utilities::ToMat(tree, &inHeader, layer);
-	// 	imwrite("./test_" + to_string(layer) + ".png", inFileImage);
-	// 	delete tree;
-	// }
+	// vector<int> compression_params;
+    // compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    // compression_params.push_back(100);
+	// imwrite(parameters.OutputFileName + ".jpg", Utilities::ToMat(inTree, &header, 7), compression_params);
 
-	// imshow("Output Image", croppedOutputImage);
+	// imshow("inTree", Utilities::ToMat(inTree, &header, 8));
 	// waitKey(0);
+
+	// delete inTree;
+	// return 0;
+
+	// _imagePSNRCompare(parameters.OutputFileName, parameters.InputFileName);
 	
 	return 0;
+}
+
+void _imagePSNRCompare(string pictsFilePath, string originalFilePath)
+{
+	// load PICTS file
+	HeaderOptions header;
+	HuffmanTree *tree = Utilities::OpenFile(pictsFilePath, header);
+
+	// load original file
+	Mat original = imread(originalFilePath, IMREAD_COLOR);
+
+	cout << originalFilePath << "\t" << (int)header.getQuality() << "\t";
+
+	vector<double> psnrDifferences;
+	// foreach PICTS layer, get original resized to same dimensions
+	for (uint8_t i = 0; i < header.getLayerCount(); i++)
+	{
+		Mat currentLayerImage = Utilities::ToMat(tree, &header, i + 1);
+		Mat resizedOriginal = original.clone();
+
+		resize(resizedOriginal, resizedOriginal, currentLayerImage.size());
+
+		// compare PSNR to original
+		double psnrEachother = Utilities::getPSNR(currentLayerImage, resizedOriginal);
+
+		// resize(resizedOriginal, resizedOriginal, original.size());
+		// resize(currentLayerImage, currentLayerImage, original.size());
+
+		psnrDifferences.push_back(psnrEachother);
+
+		// print results
+		cout << psnrEachother << "\t";
+	}
+
+	// find layer with max PSNR
+	double maxValue = 0.0;
+	uint8_t index = 0, maxIndex = 0;
+	for (double value : psnrDifferences)
+	{
+		// cout << endl << value << "\t" << maxValue << endl;
+		if (value > maxValue)
+		{
+			maxValue = value;
+			maxIndex = index;
+		}
+
+		index++;
+	}
+
+	cout << endl;
+
+	delete tree;
 }
